@@ -1,0 +1,29 @@
+{
+  "name": "gyroscope-itg3200",
+  "version": "0.0.1",
+  "description": "Library to run the ITG 3200 gyroscope via the i2c bus.",
+  "main": "Gyroscope.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/psiphi75/gyroscope-itg3200"
+  },
+  "keywords": [
+    "ITG3200",
+    "ITG",
+    "3200",
+    "gyro",
+    "gyroscope",
+    "i2c"
+  ],
+  "author": "Simon M. Werner",
+  "license": "APSL-2.0",
+  "bugs": {
+    "url": "https://github.com/psiphi75/gyroscope-itg3200/issues"
+  },
+  "dependencies": {
+    "i2c-bus": "^1.0.2"
+  }
+}
