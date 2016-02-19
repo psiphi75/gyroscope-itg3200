@@ -37,6 +37,11 @@ var GYRO_DEGREES_VALUE = 0x18;      // Default
 var GYRO_READ_ADDRESS = 0x1B;
 var GYRO_READ_LEN = 8;
 
+var GYRO_SENSITIVITY = 14.375;
+
+var TEMP_OFFSET = 0; // (35 - 13200 / 280);  ()
+var TEMP_SENSITIVITY = 280;
+
 /**
  * Initalise the gyroscope.
  * @param {number}   i2cBusNum The i2c bus number.
@@ -62,11 +67,22 @@ function Gyroscope(i2cBusNum) {
 
 
 /**
- * Get the raw (unscaled) values from the compass.
- * @param  {Function} callback The standard callback -> (err, {x:string, y:string, z:string})
+ * Get the values from the gyroscope.
+ * @param  {Function} callback The standard callback -> (err, {temp: number, x:number, y:number, z:number})
  */
 Gyroscope.prototype.getValues = function (callback) {
+
+    if (!this.calibrationOffset) {
+        console.error('WARNING: The gyroscrope has not yet been calibrated.');
+        this.calibrationOffset = {
+            x: 0,
+            y: 0,
+            z: 0
+        };
+    }
+
     var buf = new Buffer(GYRO_READ_LEN);
+    var self = this;
     this.i2c.readI2cBlock(GYRO_ADDRESS, GYRO_READ_ADDRESS, GYRO_READ_LEN, buf, function (err2) {
         if (err2) {
             callback(err2);
@@ -82,11 +98,13 @@ Gyroscope.prototype.getValues = function (callback) {
         var bz1 = buf[6];
         var bz0 = buf[7];
 
+        console.log(buf, 35 + (bt0 + (bt1 << 8) + 13200) / 280, 35 + (bt0 + (bt1 << 8) - 13200) / 280);
+
         var result = {
-            temp: convertBytes(bt0, bt1, 82.143, 280),
-            x: convertBytes(bx0, bx1, 20.8, 14.375),
-            y: convertBytes(by0, by1, -1, 14.375),
-            z: convertBytes(bz0, bz1, -0.4, 14.375)
+            temp: convertBytes(bt0, bt1, TEMP_OFFSET, TEMP_SENSITIVITY),
+            x: convertBytes(bx0, bx1, self.calibrationOffset.x, GYRO_SENSITIVITY),
+            y: convertBytes(by0, by1, self.calibrationOffset.y, GYRO_SENSITIVITY),
+            z: convertBytes(bz0, bz1, self.calibrationOffset.z, GYRO_SENSITIVITY)
         };
 
         callback(null, result);
@@ -96,27 +114,69 @@ Gyroscope.prototype.getValues = function (callback) {
 
 
 /**
+ * Calibrate the gyroscope.  Before the gyro is used it should be calibrated, this needs to
+ * be done when it is still.
+ * @param  {Function} callback The standard callback -> (err, {x:number, y:number, z:number})
+ */
+Gyroscope.prototype.calibrate = function (callback) {
+    this.calibrationOffset = {
+        x: 0,
+        y: 0,
+        z: 0
+    };
+    var xAve = 0;
+    var yAve = 0;
+    var zAve = 0;
+    var MAX_COUNT = 5;
+    var count = 0;
+    var self = this;
+    var fnInt = setInterval(function () {
+        self.getValues(function(err, values) {
+            if (err) {
+                callback(err);
+                clearInterval(fnInt);
+                return;
+            }
+            xAve += values.x;
+            yAve += values.y;
+            zAve += values.z;
+            count += 1;
+            if (count >= MAX_COUNT) {
+                self.calibrationOffset = {
+                    x: -(xAve / count),
+                    y: -(yAve / count),
+                    z: -(zAve / count)
+                };
+                callback(null, self.calibrationOffset);
+                clearInterval(fnInt);
+            }
+        });
+    }, 50);
+};
+
+
+/**
  * Convert the bytes to actual values.
- * @param  {number} byte0       The first byte.
- * @param  {number} byte1       The second byte.
+ * @param  {number} byteLo       The first byte.
+ * @param  {number} byteHi       The second byte.
  * @param  {number} offset      The offset value.
  * @param  {number} sensitivity The sensitivity.
  * @return {number}             The actual value.
  */
-function convertBytes(byte0, byte1, offset, sensitivity) {
+function convertBytes(byteLo, byteHi, offset, sensitivity) {
 
     // add the two bytes together (bit-shift x1)
-    var val = byte0 + (byte1 << 8);
+    var byteVal;
 
     // if we have a negative byte value
-    if (byte1 > 15) {
-
-        // don't count the first 4 bits
-        byte1 = byte1 & 0x0F;
-        val = (byte0 + (byte1 << 8)) + 1;
-        val = -val;
+    if (byteHi > 15) {
+        byteHi = byteHi & 0x0F;                         // don't count the first 4 bits
+        byteVal = 0x0FFF - (byteLo + (byteHi << 8));    // Make the value negative
+    } else {
+        byteVal = byteLo + (byteHi << 8);
     }
-    return offset + (val / sensitivity);
+
+    return offset + (byteVal / sensitivity);
 }
 
 

@@ -28,12 +28,6 @@ var Gyroscope = require('gyroscope-itg3200');
 // The initialiser is the i2c bus number that the accelerometer is on.
 var gyro = new Gyroscope(2);
 
-// Get the accelerometer values every 100 milliseconds
-setInterval(function() {
-    gyro.getValues(printValuesCB);
-}, 100);
-
-
 // Gets called every time we get the values.
 function printValuesCB(err, values) {
     if (err) {
@@ -42,6 +36,13 @@ function printValuesCB(err, values) {
     }
     console.log(values);
 }
+
+gyro.calibrate(function () {
+    // Get the accelerometer values every 100 milliseconds
+    setInterval(function() {
+        gyro.getValues(printValuesCB);
+    }, 100);
+});
 
 
 // // Get the gyro values
