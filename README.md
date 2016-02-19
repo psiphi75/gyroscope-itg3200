@@ -1,15 +1,14 @@
 # gyroscope-itg3200
 
-Library to run the ITG 3200 gyroscope via the i2c bus.  It has tested on the BeagleBone Series, but it should also work for the Raspberry Pi.
+Library to run the ITG 3200 3-axis gyroscope via the i2c bus.  It has tested on the BeagleBone Series, but it should also work for the Raspberry Pi.  One thing about the ITG 3200 is that also has a temperature sensor, this library returns the temperature.
 
-
-Install:
+### Install:
 
 ```bash
 npm install gyroscope-itg3200
 ```
 
-Using it:
+### Using it:
 
 ```javascript
 var Gyroscope = require('gyroscope-itg3200');
@@ -19,14 +18,35 @@ var gyro = new Gyroscope(2);
 
 // Get the gyro values
 gyro.getValues(function (err, values) {
-    console.log(values); // { temp: 25, x: }
+    console.log(values);
 });
 ```
+
+In the above code `values` has the following format:
+```javascript
+{ temp: 23.942857142857143,     // The Temperature in degrees Celsius
+  x: -0.27826086956521723,      // The x Gyro in degrees per second.
+  y: -0.0417391304347825,       // The y Gyro in degrees per second.
+  z: -0.11130434782608692 }     // The z Gyro in degrees per second.
+```
+
+### Calibration
+
+The Gyroscope requires calibration each time it is used.  The calibration process requires the gyroscope to be at rest.  It will calibrate using 5 data points over a short period of time.
+
+```javascript
+gyro.calibrate(function () {
+    console.log('Gyro calibrated and ready to use.');
+});
+```
+
 
 # Further reading
 - [Technical documentation (datasheet) for the MMA7660FC](http://www.farnell.com/datasheets/1670762.pdf)
 
 # To Do for v1.0.0
+- The Temperature value being returned are buggy.  Need to fix.
+- Save the calibration values for the future, such that calibration is not required each time.
 - [Implement noise reduction](http://stackoverflow.com/questions/1638864/filtering-accelerometer-data-noise).
 
 

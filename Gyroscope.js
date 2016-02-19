@@ -98,8 +98,6 @@ Gyroscope.prototype.getValues = function (callback) {
         var bz1 = buf[6];
         var bz0 = buf[7];
 
-        console.log(buf, 35 + (bt0 + (bt1 << 8) + 13200) / 280, 35 + (bt0 + (bt1 << 8) - 13200) / 280);
-
         var result = {
             temp: convertBytes(bt0, bt1, TEMP_OFFSET, TEMP_SENSITIVITY),
             x: convertBytes(bx0, bx1, self.calibrationOffset.x, GYRO_SENSITIVITY),
