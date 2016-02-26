@@ -24,7 +24,7 @@
 'use strict';
 
 // The datasheet documentation for the ITG 3200 can be found here:
-//
+//     http://www.farnell.com/datasheets/1670762.pdf
 
 var GYRO_ADDRESS = 0x68;
 
@@ -76,7 +76,7 @@ function Gyroscope(i2cBusNum) {
  */
 Gyroscope.prototype.getValues = function (callback) {
 
-    if (!this.calibrationOffset) {
+    if (typeof this.calibrationOffset === 'undefined') {
         console.error('WARNING: The gyroscrope has not yet been calibrated.');
         this.calibrationOffset = {
             x: 0,
@@ -172,7 +172,7 @@ function convertBytes(byteLo, byteHi, offset, sensitivity) {
 
     if (byteHi > 15) {
         byteHi = byteHi & 0x0F;                         // don't count the first 4 bits
-        byteVal = 0x0FFF - (byteLo + (byteHi << 8));    // Make the value negative
+        byteVal = (byteLo + (byteHi << 8)) - 0x0FFF;    // Make the value negative
     } else {
         byteVal = byteLo + (byteHi << 8);
     }
