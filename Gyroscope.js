@@ -24,18 +24,28 @@
 'use strict';
 
 // The datasheet documentation for the ITG 3200 can be found here:
-//     http://www.farnell.com/datasheets/1670762.pdf
+//     https://www.sparkfun.com/datasheets/Sensors/Gyro/PS-ITG-3200-00-01.4.pdf
 
 var GYRO_ADDRESS = 0x68;
 
+
 var GYRO_RESET_ADDRESS = 0x3E;
-var GYRO_RESET_BYTE = 0x80;             // Power management register: refer to page 27 of datasheet
 
+// Power management register: refer to page 27 of datasheet
+var GYRO_RESET_BYTE = 0x80;
+
+// Set the digital low pass filter (DLPF) settings: refer to pg 24
+var GYRO_DLPF_ADDRESS = 0x16;
+var GYRO_DLPF_VALUE = (0x03 << 3) + 0x00;   // (FS_SEL << 3) + DLPF_CFG
+var GYRO_DEFAULT_F_INTERNAL = 8000;
+
+// Sample rate divider: use default value 0x00 for full range: refer to pg 23
 var GYRO_SAMPLERATE_ADDRESS = 0x15;
-var GYRO_SAMPLERATE_DIVIDER = 0x00;     // Sample rate divider: use default value 0x00 for full range: refer to pg 23
+var GYRO_DEFAULT_F_SAMPLE = 100; // Choose default of 100 ms
 
+// gyro full scale range: refer to pg 24
 var GYRO_DEGREES_ADDRESS = 0x16;
-var GYRO_DEGREES_VALUE = 0x18;          // gyro full scale range: refer to pg 24
+var GYRO_DEGREES_VALUE = 0x18;
 
 var GYRO_READ_ADDRESS = 0x1B;
 var GYRO_READ_LEN = 8;
@@ -43,26 +53,33 @@ var GYRO_READ_LEN = 8;
 var GYRO_SENSITIVITY = 14.375;
 
 // 280 is the sensitivity. refer to pg 7 section temperature sensor.
-var TEMP_OFFSET = 0; // (35 - 13200 / 280);  ()
+var TEMP_OFFSET = 0; // (35 - 13200 / 280);
 var TEMP_SENSITIVITY = 280;
 
 /**
  * Initalise the gyroscope.
  * @param {number}   i2cBusNum The i2c bus number.
  */
-function Gyroscope(i2cBusNum) {
+function Gyroscope(i2cBusNum, options) {
 
     if (typeof i2cBusNum !== 'number') {
         throw new Error('Gyroscope: i2cBusNum must be a number.');
     }
 
-    this.i2c = require('i2c-bus').openSync(i2cBusNum);
+    if (!options) {
+        options = {};
+    }
+    this.i2c = options.i2c || require('i2c-bus').openSync(i2cBusNum);
+    this.sampleRate = options.sampleRate || GYRO_DEFAULT_F_SAMPLE;
 
     // Reset the device
     this.i2c.writeByteSync(GYRO_ADDRESS, GYRO_RESET_ADDRESS, GYRO_RESET_BYTE);
 
     // Set the sample rate
-    this.i2c.writeByteSync(GYRO_ADDRESS, GYRO_SAMPLERATE_ADDRESS, GYRO_SAMPLERATE_DIVIDER);
+    this.i2c.writeByteSync(GYRO_ADDRESS, GYRO_SAMPLERATE_ADDRESS, calcSampleRateDivisor(this.sampleRate));
+
+    // Set the digital low pass filter value
+    this.i2c.writeByteSync(GYRO_ADDRESS, GYRO_DLPF_ADDRESS, GYRO_DLPF_VALUE);
 
     // Set the degrees value
     this.i2c.writeByteSync(GYRO_ADDRESS, GYRO_DEGREES_ADDRESS, GYRO_DEGREES_VALUE);
@@ -178,6 +195,27 @@ function convertBytes(byteLo, byteHi, offset, sensitivity) {
     }
 
     return offset + (byteVal / sensitivity);
+}
+
+
+/**
+ * Calculate the divisor for the ITG 3200 based on a default sample rate.  This
+ * reverse engineering of the divider (see section 8.2 on pg 23 of
+ * ITG 3200 speification documentation).
+ *
+ * @param  {number} sampleRate The sampleRate in milliseconds
+ * @return {number}            The divisor
+ */
+function calcSampleRateDivisor(sampleRate) {
+    var divisor = GYRO_DEFAULT_F_INTERNAL * sampleRate / 1000 - 1;
+    if (divisor < 0) {
+        console.error('Gyroscope::calcSampleRateDivisor(): sampleRate value is too small: ', sampleRate);
+        return 0;
+    }
+    if (divisor > 255) {
+        return 255;
+    }
+    return Math.floor(divisor);
 }
 
 

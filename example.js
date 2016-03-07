@@ -45,6 +45,9 @@ gyro.calibrate(function () {
 });
 
 
+// // Set some default values
+// var gyro = new Gyroscope(2, { sampleRate: REFRESH_RATE, i2c: require('i2c-bus')} );
+//
 // // Get the gyro values
 // gyro.getValues(function (err, values) {
 //     console.log(values);
