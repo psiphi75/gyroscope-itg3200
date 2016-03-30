@@ -1,6 +1,6 @@
 {
   "name": "gyroscope-itg3200",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Library to run the ITG 3200 gyroscope via the i2c bus.",
   "main": "Gyroscope.js",
   "scripts": {
