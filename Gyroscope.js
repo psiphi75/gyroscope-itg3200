@@ -69,20 +69,26 @@ function Gyroscope(i2cBusNum, options) {
     if (!options) {
         options = {};
     }
-    this.i2c = options.i2c || require('i2c-bus').openSync(i2cBusNum);
+    this.i2c = (options.i2c || require('i2c-bus')).openSync(i2cBusNum);
     this.sampleRate = options.sampleRate || GYRO_DEFAULT_F_SAMPLE;
 
-    // Reset the device
-    this.i2c.writeByteSync(GYRO_ADDRESS, GYRO_RESET_ADDRESS, GYRO_RESET_BYTE);
+    try {
 
-    // Set the sample rate
-    this.i2c.writeByteSync(GYRO_ADDRESS, GYRO_SAMPLERATE_ADDRESS, calcSampleRateDivisor(this.sampleRate));
+        // Reset the device
+        this.i2c.writeByteSync(GYRO_ADDRESS, GYRO_RESET_ADDRESS, GYRO_RESET_BYTE);
 
-    // Set the digital low pass filter value
-    this.i2c.writeByteSync(GYRO_ADDRESS, GYRO_DLPF_ADDRESS, GYRO_DLPF_VALUE);
+        // Set the sample rate
+        this.i2c.writeByteSync(GYRO_ADDRESS, GYRO_SAMPLERATE_ADDRESS, calcSampleRateDivisor(this.sampleRate));
 
-    // Set the degrees value
-    this.i2c.writeByteSync(GYRO_ADDRESS, GYRO_DEGREES_ADDRESS, GYRO_DEGREES_VALUE);
+        // Set the digital low pass filter value
+        this.i2c.writeByteSync(GYRO_ADDRESS, GYRO_DLPF_ADDRESS, GYRO_DLPF_VALUE);
+
+        // Set the degrees value
+        this.i2c.writeByteSync(GYRO_ADDRESS, GYRO_DEGREES_ADDRESS, GYRO_DEGREES_VALUE);
+
+    } catch (ex) {
+        console.error('Gyroscope(): there was an error initialising: ', ex);
+    }
 
 }
 
@@ -94,7 +100,7 @@ function Gyroscope(i2cBusNum, options) {
 Gyroscope.prototype.getValues = function (callback) {
 
     if (typeof this.calibrationOffset === 'undefined') {
-        console.error('WARNING: The gyroscrope has not yet been calibrated.');
+        console.error('WARNING: Gyroscope.getValues(): The gyroscrope has not yet been calibrated.');
         this.calibrationOffset = {
             x: 0,
             y: 0,
@@ -104,9 +110,16 @@ Gyroscope.prototype.getValues = function (callback) {
 
     var buf = new Buffer(GYRO_READ_LEN);
     var self = this;
-    this.i2c.readI2cBlock(GYRO_ADDRESS, GYRO_READ_ADDRESS, GYRO_READ_LEN, buf, function (err2) {
-        if (err2) {
-            callback(err2);
+    try {
+        this.i2c.readI2cBlock(GYRO_ADDRESS, GYRO_READ_ADDRESS, GYRO_READ_LEN, buf, i2cCallback);
+    } catch (ex) {
+        console.error('ERROR: Gyroscope.getValues(): there was an error initialising: ', ex);
+        return;
+    }
+
+    function i2cCallback(err) {
+        if (err) {
+            callback(err);
             return;
         }
 
@@ -127,7 +140,7 @@ Gyroscope.prototype.getValues = function (callback) {
         };
 
         callback(null, result);
-    });
+    }
 
 };
 
