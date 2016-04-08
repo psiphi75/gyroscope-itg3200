@@ -58,7 +58,12 @@ var TEMP_SENSITIVITY = 280;
 
 /**
  * Initalise the gyroscope.
- * @param {number}   i2cBusNum The i2c bus number.
+ * @param {number}  i2cBusNum The i2c bus number.
+ * @param {object}  options   The additional options.
+ *
+ * Options:
+ *   i2c: the i2c library (such that we don't have to load it twice).
+ *   sampleRate:  The sample Rate in milliseconds.
  */
 function Gyroscope(i2cBusNum, options) {
 
@@ -113,33 +118,39 @@ Gyroscope.prototype.getValues = function (callback) {
     try {
         this.i2c.readI2cBlock(GYRO_ADDRESS, GYRO_READ_ADDRESS, GYRO_READ_LEN, buf, i2cCallback);
     } catch (ex) {
-        console.error('ERROR: Gyroscope.getValues(): there was an error initialising: ', ex);
-        return;
+        console.error('ERROR: Gyroscope.getValues(): there was an error in reading i2c: ', ex);
+        if (callback) {
+            callback(ex);
+            callback = null;
+        }
     }
 
     function i2cCallback(err) {
+
         if (err) {
             callback(err);
-            return;
+        } else {
+
+            var bt1 = buf[0];
+            var bt0 = buf[1];
+            var bx1 = buf[2];
+            var bx0 = buf[3];
+            var by1 = buf[4];
+            var by0 = buf[5];
+            var bz1 = buf[6];
+            var bz0 = buf[7];
+
+            var result = {
+                temp: convertBytes(bt0, bt1, TEMP_OFFSET, TEMP_SENSITIVITY),
+                x: convertBytes(bx0, bx1, self.calibrationOffset.x, GYRO_SENSITIVITY),
+                y: convertBytes(by0, by1, self.calibrationOffset.y, GYRO_SENSITIVITY),
+                z: convertBytes(bz0, bz1, self.calibrationOffset.z, GYRO_SENSITIVITY)
+            };
+
+            callback(null, result);
         }
+        callback = null;
 
-        var bt1 = buf[0];
-        var bt0 = buf[1];
-        var bx1 = buf[2];
-        var bx0 = buf[3];
-        var by1 = buf[4];
-        var by0 = buf[5];
-        var bz1 = buf[6];
-        var bz0 = buf[7];
-
-        var result = {
-            temp: convertBytes(bt0, bt1, TEMP_OFFSET, TEMP_SENSITIVITY),
-            x: convertBytes(bx0, bx1, self.calibrationOffset.x, GYRO_SENSITIVITY),
-            y: convertBytes(by0, by1, self.calibrationOffset.y, GYRO_SENSITIVITY),
-            z: convertBytes(bz0, bz1, self.calibrationOffset.z, GYRO_SENSITIVITY)
-        };
-
-        callback(null, result);
     }
 
 };
