@@ -40,15 +40,14 @@ gyro.calibrate(function () {
 });
 ```
 
-
 # Further reading
 - [Technical documentation (datasheet) for the ITG 3200](https://www.sparkfun.com/datasheets/Sensors/Gyro/PS-ITG-3200-00-01.4.pdf)
 
 # To Do for v1.0.0
-- The Temperature value being returned are buggy.  Need to fix.
 - Save the calibration values for the future, such that calibration is not required each time.
 - [Implement noise reduction](http://stackoverflow.com/questions/1638864/filtering-accelerometer-data-noise).
-- *Done:* Make the sample rate configurable - currently set at maximum rate (which may not be efficient for all purposes).
+- **Done**: The Temperature value being returned are buggy.  Need to fix.
+- **Done:** Make the sample rate configurable - currently set at maximum rate (which may not be efficient for all purposes).
 
 
 ## License

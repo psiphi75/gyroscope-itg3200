@@ -28,7 +28,6 @@
 
 var GYRO_ADDRESS = 0x68;
 
-
 var GYRO_RESET_ADDRESS = 0x3E;
 
 // Power management register: refer to page 27 of datasheet
@@ -53,8 +52,9 @@ var GYRO_READ_LEN = 8;
 var GYRO_SENSITIVITY = 14.375;
 
 // 280 is the sensitivity. refer to pg 7 section temperature sensor.
-var TEMP_OFFSET = 0; // (35 - 13200 / 280);
+var TEMP_OFFSET = 13200; // (35 - 13200 / 280);
 var TEMP_SENSITIVITY = 280;
+var TEMP_OFFSET_CELCIUS = 35;
 
 /**
  * Initalise the gyroscope.
@@ -141,7 +141,7 @@ Gyroscope.prototype.getValues = function (callback) {
             var bz0 = buf[7];
 
             var result = {
-                temp: convertBytes(bt0, bt1, TEMP_OFFSET, TEMP_SENSITIVITY),
+                temp: ((((bt1 & 0x0f) << 8) | bt0) + TEMP_OFFSET) / TEMP_SENSITIVITY - TEMP_OFFSET_CELCIUS,
                 x: convertBytes(bx0, bx1, self.calibrationOffset.x, GYRO_SENSITIVITY),
                 y: convertBytes(by0, by1, self.calibrationOffset.y, GYRO_SENSITIVITY),
                 z: convertBytes(bz0, bz1, self.calibrationOffset.z, GYRO_SENSITIVITY)
